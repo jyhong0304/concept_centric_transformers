@@ -32,6 +32,8 @@ def get_parser(parser):
                         help='weight of explanation loss')
     parser.add_argument('--num_workers', default=8, type=int, help='number of workers')
     parser.add_argument('--seed', default=42, type=int, help='random seed')
+    parser.add_argument('--task', default='multiclass', type=str,
+                        help='task type')
     parser.add_argument('--model', default='cifar100superclass_cvit', type=str,
                         help='model type')
     parser.add_argument('--no_cuda', action='store_true', help='no use CUDA')
