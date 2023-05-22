@@ -1,5 +1,5 @@
 from .cub2011parts import CUB2011Parts_dataset
-from .cub2011parts_datamodule import CUB2011Parts
+from .cub2011parts_datamodules import CUB2011Parts
 from .mnist_dataset import explanation_mnist_dataset
 from .mnist_datamodules import ExplanationMNIST
 from .cifar100superclass_datamodules import CIFAR100SuperClass
