@@ -219,7 +219,7 @@ def run_exp(args):
     logger = TensorBoardLogger(".", name="logs", version=log_folder_name)
 
     # Callbacks
-    best_checkpoint = os.path.join(".", project_name, run_name, "best")
+    best_checkpoint = os.path.join(".", project_name, run_name, log_folder_name)
     callbacks = [
         ModelCheckpoint(
             dirpath=os.path.dirname(best_checkpoint),
