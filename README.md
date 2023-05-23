@@ -18,8 +18,28 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+We provide the scripts to reproduce all experiments in our paper.
 
 ### MNIST Odd/Even
+
+#### With the full training sample and 10 epochs
+You can execute our CCT with the lists of GPUs (1, 2, 3) and random seed (1, 2, 3):
+
+```bash
+python3 scripts/MNIST_OddEven/slotctc_epochs10.py --gpus 1|2|3 --seeds 1|2|3
+```
+
+For CT, you can run ```scripts/MNIST_OddEven/ctc_epochs10.py``` with the same arguements above.
+
+#### With the fewer samples from 100 to 7000
+You can execute our CCT with the lists of GPUs (0, 1, 2, 3) and random seed (1, 2, 3):
+
+```bash
+python3 scripts/MNIST_OddEven/slotctc_training_samples.py --gpus 0|1|2|3 --seeds 1|2|3
+```
+
+For CT, you can run ```scripts/MNIST_OddEven/ctc_training_samples.py``` with the same arguements above.
+
 
 ### CIFAR100 Super-class
 
