@@ -62,6 +62,15 @@ For CT, you can run ```scripts/CIFAR100_Superclass/cvittiny.py``` with the same 
 
 ### CUB-200-2011
 
+You can execute our CCT:
+
+```bash
+python3 scripts/CUB/slotcvit.py --gpus 1|2|3 --seeds 1|2|3 --data_dir YOUR_DATA_PATH/cub2011/
+```
+
+For CT, you can run ```scripts/CUB/cvit.py``` with the same arguements above.
+
+
 
 ## Acknowledgement
 Our source codes are based on:
