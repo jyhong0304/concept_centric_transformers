@@ -1,5 +1,6 @@
 # Concept Centric Transformer
 This is the official implementation of Concept-Centric Transformers.
+<img src="figs/overall_architecture.png" alt="overall_architecture_cct">
 
 ## Abstract
 Attention mechanisms have greatly improved the performance of deep-learning models on visual, NLP, and multimodal tasks while also providing tools to aid in the model's interpretability. 
