@@ -19,6 +19,7 @@ pip install -r requirements.txt
 
 ## Usage
 We provide the python files in ```scripts``` to reproduce all experiments in our paper.
+All datasets are automatically downloaded if you don't have.
 
 ### MNIST Odd/Even
 
@@ -42,6 +43,22 @@ For CT, you can run ```scripts/MNIST_OddEven/ctc_training_samples.py``` with the
 
 
 ### CIFAR100 Super-class
+
+You can execute ViT-Tiny backbone only:
+
+```bash
+python3 scripts/CIFAR100_Superclass/vittiny_backbone.py --gpus 1|2|3 --seeds 1|2|3
+```
+
+You can execute our CCT:
+
+```bash
+python3 scripts/CIFAR100_Superclass/slotcvittiny.py --gpus 1|2|3 --seeds 1|2|3
+```
+
+For CT, you can run ```scripts/CIFAR100_Superclass/cvittiny.py``` with the same arguements above.
+
+
 
 ### CUB-200-2011
 
