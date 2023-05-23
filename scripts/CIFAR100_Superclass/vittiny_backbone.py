@@ -30,7 +30,7 @@ def run_exp(gpu_num, in_queue):
         print(f"==> Starting experiment {kwargs_to_cmd(experiment)}")
         os.system(kwargs_to_cmd(experiment))
 
-        with open("vittiny_backone_output.txt", "a+") as f:
+        with open("vittiny_backbone_output.txt", "a+") as f:
             f.write(
                 f"Finished experiment {experiment} in {str((time.time() - before) / 60.0)}."
             )
