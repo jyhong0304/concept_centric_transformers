@@ -46,7 +46,6 @@ def main():
     n_training_samples = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000, 6000, 7000]
 
     experiments = []
-    # --learning_rate 0.0004 --max_epochs 150 --warmup 20 --batch_size 32 --n_train_samples 200 --expl_lambda 2.0
     for seed, num_sample in product(seeds, n_training_samples):
         kwargs = {
             "learning_rate": 0.0004,
