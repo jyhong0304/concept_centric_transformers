@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from ctc.model_utils import ConceptSlotAttention, TransformerLayer, TransformerEncoderLayer, CrossAttention
+from ctc.model_utils import ConceptSlotAttention, TransformerLayer, CrossAttention
 
 # Pre-defined CTC Models
 __all__ = ["mnist_ctc"]
