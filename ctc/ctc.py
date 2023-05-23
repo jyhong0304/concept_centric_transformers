@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from ctc.model_utils import SlotAttention
+from ctc.model_utils import ConceptSlotAttention, TransformerLayer, TransformerEncoderLayer, CrossAttention
 
 # Pre-defined CTC Models
 __all__ = ["mnist_ctc"]
@@ -83,156 +83,6 @@ def _cct(
             *args,
             **kwargs,
         )
-
-
-# Modules
-class Attention(nn.Module):
-    def __init__(self, dim, num_heads=8, attention_dropout=0.1, projection_dropout=0.1):
-        super().__init__()
-        self.num_heads = num_heads
-        head_dim = dim // self.num_heads
-        self.scale = head_dim ** -0.5
-
-        self.qkv = nn.Linear(dim, dim * 3, bias=False)
-        self.attn_drop = nn.Dropout(attention_dropout)
-        self.proj = nn.Linear(dim, dim)
-        self.proj_drop = nn.Dropout(projection_dropout)
-
-    def forward(self, x):
-        B, N, C = x.shape
-        qkv = (
-            self.qkv(x)
-            .reshape(B, N, 3, self.num_heads, C // self.num_heads)
-            .permute(2, 0, 3, 1, 4)
-        )
-        q, k, v = qkv[0], qkv[1], qkv[2]
-
-        attn = (q @ k.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-
-        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
-        x = self.proj(x)
-        x = self.proj_drop(x)
-        return x
-
-
-class CrossAttention(nn.Module):
-    def __init__(
-            self, dim, n_outputs=None, num_heads=8, attention_dropout=0.1, projection_dropout=0.0
-    ):
-        super().__init__()
-        n_outputs = n_outputs if n_outputs else dim
-        self.num_heads = num_heads
-        head_dim = dim // self.num_heads
-        self.scale = head_dim ** -0.5
-
-        self.q = nn.Linear(dim, dim, bias=False)
-        self.kv = nn.Linear(dim, dim * 2, bias=False)
-        self.attn_drop = nn.Dropout(attention_dropout)
-
-        self.proj = nn.Linear(dim, n_outputs)
-        self.proj_drop = nn.Dropout(projection_dropout)
-
-    def forward(self, x, y):
-        B, Nx, C = x.shape
-        By, Ny, Cy = y.shape
-
-        assert C == Cy, "Feature size of x and y must be the same"
-
-        q = self.q(x).reshape(B, Nx, 1, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-        kv = (
-            self.kv(y)
-            .reshape(By, Ny, 2, self.num_heads, C // self.num_heads)
-            .permute(2, 0, 3, 1, 4)
-        )
-
-        q = q[0]
-        k, v = kv[0], kv[1]
-
-        attn = (q @ k.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-
-        x = (attn @ v).transpose(1, 2).reshape(B, Nx, C)
-        x = self.proj(x)
-        x = self.proj_drop(x)
-        return x, attn
-
-
-class TransformerEncoderLayer(nn.Module):
-    """
-    Inspired by torch.nn.TransformerEncoderLayer and
-    rwightman's timm package.
-    """
-
-    def __init__(
-            self,
-            d_model,
-            nhead,
-            dim_feedforward=2048,
-            dropout=0.1,
-            attention_dropout=0.1,
-            drop_path_rate=0.1,
-    ):
-        super().__init__()
-        self.pre_norm = nn.LayerNorm(d_model)
-        self.self_attn = Attention(
-            dim=d_model,
-            num_heads=nhead,
-            attention_dropout=attention_dropout,
-            projection_dropout=dropout,
-        )
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.dropout1 = nn.Dropout(dropout)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-        self.dropout2 = nn.Dropout(dropout)
-
-        self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0 else nn.Identity()
-
-        self.activation = F.gelu
-
-    def forward(self, src: torch.Tensor, *args, **kwargs) -> torch.Tensor:
-        src = src + self.drop_path(self.self_attn(self.pre_norm(src)))
-        src = self.norm1(src)
-        src2 = self.linear2(self.dropout1(self.activation(self.linear1(src))))
-        src = src + self.drop_path(self.dropout2(src2))
-        return src
-
-
-def drop_path(x, drop_prob: float = 0.0, training: bool = False):
-    """
-    Obtained from: github.com:rwightman/pytorch-image-models
-    Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-    This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
-    the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
-    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for
-    changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use
-    'survival rate' as the argument.
-    """
-    if drop_prob == 0.0 or not training:
-        return x
-    keep_prob = 1 - drop_prob
-    shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
-    random_tensor.floor_()  # binarize
-    output = x.div(keep_prob) * random_tensor
-    return output
-
-
-class DropPath(nn.Module):
-    """
-    Obtained from: github.com:rwightman/pytorch-image-models
-    Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
-    """
-
-    def __init__(self, drop_prob=None):
-        super().__init__()
-        self.drop_prob = drop_prob
-
-    def forward(self, x):
-        return drop_path(x, self.drop_prob, self.training)
 
 
 class PretrainedTokenizer(nn.Module):
@@ -383,100 +233,6 @@ class FactorizedPositionEncoding(nn.Module):
         return x
 
 
-class TransformerLayer(nn.Module):
-    def __init__(
-            self,
-            embedding_dim=768,
-            num_layers=12,
-            num_heads=12,
-            mlp_ratio=4.0,
-            dropout_rate=0.1,
-            attention_dropout=0.1,
-            stochastic_depth_rate=0.1,
-            positional_embedding="sine",
-            sequence_length=None,
-            *args,
-            **kwargs,
-    ):
-        super().__init__()
-
-        positional_embedding = (
-            positional_embedding
-            if positional_embedding in ["sine", "learnable", "none"]
-            else "sine"
-        )
-        dim_feedforward = int(embedding_dim * mlp_ratio)
-        self.embedding_dim = embedding_dim
-        self.sequence_length = sequence_length
-
-        assert sequence_length is not None or positional_embedding == "none", (
-            f"Positional embedding is set to {positional_embedding} and"
-            f" the sequence length was not specified."
-        )
-
-        if positional_embedding != "none":
-            if positional_embedding == "learnable":
-                self.positional_emb = nn.Parameter(
-                    torch.zeros(1, sequence_length, embedding_dim), requires_grad=True
-                )
-                nn.init.trunc_normal_(self.positional_emb, std=0.2)
-            else:
-                self.positional_emb = nn.Parameter(
-                    self.sinusoidal_embedding(sequence_length, embedding_dim), requires_grad=False
-                )
-        else:
-            self.positional_emb = None
-
-        self.dropout = nn.Dropout(p=dropout_rate)
-        dpr = [x.item() for x in torch.linspace(0, stochastic_depth_rate, num_layers)]
-        self.blocks = nn.ModuleList(
-            [
-                TransformerEncoderLayer(
-                    d_model=embedding_dim,
-                    nhead=num_heads,
-                    dim_feedforward=dim_feedforward,
-                    dropout=dropout_rate,
-                    attention_dropout=attention_dropout,
-                    drop_path_rate=dpr[i],
-                )
-                for i in range(num_layers)
-            ]
-        )
-
-        self.apply(self.init_weight)
-
-    def forward(self, x):
-        if self.positional_emb is not None:
-            x += self.positional_emb
-        elif self.sequence_length is not None and x.size(1) < self.sequence_length:
-            x = F.pad(x, (0, 0, 0, self.n_channels - x.size(1)), mode="constant", value=0)
-
-        x = self.dropout(x)
-
-        for blk in self.blocks:
-            x = blk(x)
-        return x
-
-    @staticmethod
-    def init_weight(m):
-        if isinstance(m, nn.Linear):
-            nn.init.trunc_normal_(m.weight, std=0.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.LayerNorm):
-            nn.init.constant_(m.bias, 0)
-            nn.init.constant_(m.weight, 1.0)
-
-    @staticmethod
-    def sinusoidal_embedding(n_channels, dim):
-        pe = torch.FloatTensor(
-            [[p / (10000 ** (2 * (i // 2) / dim)) for i in range(dim)] for p in range(n_channels)]
-        )
-        pe[:, 0::2] = torch.sin(pe[:, 0::2])
-        pe[:, 1::2] = torch.cos(pe[:, 1::2])
-        return pe.unsqueeze(0)
-
-
 class ConceptTransformer(nn.Module):
     """
     Processes spatial and non-spatial concepts in parallel and aggregates the log-probabilities at the end
@@ -572,11 +328,7 @@ class ConceptTransformer(nn.Module):
         return out, unsup_concept_attn, concept_attn, spatial_concept_attn
 
 
-class SlotConceptTransformer(nn.Module):
-    """
-    Processes spatial and non-spatial concepts in parallel and aggregates the log-probabilities at the end
-    """
-
+class ConceptCentricTransformer(nn.Module):
     def __init__(
             self,
             embedding_dim=768,
@@ -596,10 +348,10 @@ class SlotConceptTransformer(nn.Module):
         # Unsupervised concepts
         self.n_unsup_concepts = n_unsup_concepts
         if n_unsup_concepts > 0:
-            # JINYUNG HONG
-            self.unsup_concept_slot_attention = SlotAttention(num_iterations=1, num_slots=n_unsup_concepts,
-                                                              slot_size=embedding_dim,
-                                                              mlp_hidden_size=embedding_dim, input_size=embedding_dim)
+            self.unsup_concept_slot_attention = ConceptSlotAttention(num_iterations=1, num_slots=n_unsup_concepts,
+                                                                     slot_size=embedding_dim,
+                                                                     mlp_hidden_size=embedding_dim,
+                                                                     input_size=embedding_dim)
             self.unsup_concept_slot_pos = nn.Parameter(torch.zeros(1, 1, n_concepts * embedding_dim),
                                                        requires_grad=True)
             self.unsup_concept_tranformer = CrossAttention(
@@ -613,8 +365,9 @@ class SlotConceptTransformer(nn.Module):
         self.n_concepts = n_concepts
         if n_concepts > 0:
             # JINYUNG HONG
-            self.concept_slot_attention = SlotAttention(num_iterations=1, num_slots=n_concepts, slot_size=embedding_dim,
-                                                        mlp_hidden_size=embedding_dim, input_size=embedding_dim)
+            self.concept_slot_attention = ConceptSlotAttention(num_iterations=1, num_slots=n_concepts,
+                                                               slot_size=embedding_dim,
+                                                               mlp_hidden_size=embedding_dim, input_size=embedding_dim)
             self.concept_slot_pos = nn.Parameter(torch.zeros(1, 1, n_concepts * embedding_dim), requires_grad=True)
             self.concept_tranformer = CrossAttention(
                 dim=embedding_dim,
@@ -632,9 +385,10 @@ class SlotConceptTransformer(nn.Module):
         self.n_spatial_concepts = n_spatial_concepts
         if n_spatial_concepts > 0:
             # JINYUNG HONG
-            self.spatial_concept_slot_attention = SlotAttention(num_iterations=1, num_slots=n_spatial_concepts,
-                                                                slot_size=embedding_dim,
-                                                                mlp_hidden_size=embedding_dim, input_size=embedding_dim)
+            self.spatial_concept_slot_attention = ConceptSlotAttention(num_iterations=1, num_slots=n_spatial_concepts,
+                                                                       slot_size=embedding_dim,
+                                                                       mlp_hidden_size=embedding_dim,
+                                                                       input_size=embedding_dim)
             self.spatial_concept_slot_pos = nn.Parameter(torch.zeros(1, 1, n_spatial_concepts * embedding_dim),
                                                          requires_grad=True)
             self.spatial_concept_tranformer = CrossAttention(
@@ -851,7 +605,7 @@ class SlotCTC(nn.Module):
         )
         self.norm = nn.LayerNorm(embedding_dim)
 
-        self.concept_transformer = SlotConceptTransformer(
+        self.concept_transformer = ConceptCentricTransformer(
             embedding_dim=embedding_dim,
             attention_dropout=0.1,
             projection_dropout=0.1,
