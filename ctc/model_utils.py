@@ -322,7 +322,7 @@ class DropPath(nn.Module):
         return drop_path(x, self.drop_prob, self.training)
 
 
-class SlotAttention(nn.Module):
+class ConceptSlotAttention(nn.Module):
     def __init__(self, num_iterations, num_slots,
                  input_size, slot_size, mlp_hidden_size,
                  epsilon=1e-8):
