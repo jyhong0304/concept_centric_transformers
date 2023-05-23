@@ -1,10 +1,3 @@
-import math
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
-from collections import OrderedDict
-from ctc.model_utils import SlotAttention, Tokenizer, TransformerLayer, CrossAttention
 import timm
 from .vit import CVIT, SlotCVIT
 from timm.models.vision_transformer import VisionTransformer
@@ -36,10 +29,6 @@ def cifar100superclass_cvit(backbone_name='vit_tiny_patch16_224', baseline=False
 
 
 def cifar100superclass_slotcvit(backbone_name='vit_tiny_patch16_224', *args, **kwargs):
-    """
-    Args:
-        baseline (bool): If true it returns the baseline model, which in this case it just the vit backbone without concept transformer
-    """
     return SlotCVIT(
         model_name=backbone_name,
         num_classes=20,
