@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-We provide the scripts to reproduce all experiments in our paper.
+We provide the python files in ```scripts``` to reproduce all experiments in our paper.
 
 ### MNIST Odd/Even
 
