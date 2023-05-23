@@ -13,7 +13,7 @@ def get_parser(parser):
     parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--debug', action='store_true',
                         help='Set debug mode in Lightning module')
-    parser.add_argument('--data_dir', default='/data/jhong53/datasets/cub2011/', type=str,
+    parser.add_argument('--data_dir', default='~/cub2011/', type=str,
                         help='dataset root directory')
     parser.add_argument('--weight_decay', default=1e-3, type=float,
                         help='weight decay (default: 1e-3)')
