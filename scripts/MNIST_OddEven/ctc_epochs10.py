@@ -40,9 +40,7 @@ def main():
     parser.add_argument('--seeds', default=1, type=lambda x: [a for a in x.split("|") if a])
     args = parser.parse_args()
 
-    # gpus = [1, 2, 3]
     gpus = args.gpus
-    # seeds = [1, 2, 3]
     seeds = args.seeds
 
     experiments = []
