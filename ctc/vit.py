@@ -3,11 +3,10 @@ import timm
 import torch
 from timm.models.vision_transformer import VisionTransformer
 from torch import nn
-from .ctc import CrossAttention
-from ctc.model_utils import SlotAttention
+from ctc.model_utils import ConceptSlotAttention, CrossAttention
 
 
-def cub_cvit(backbone_name="vit_large_patch16_224", baseline=False, use_slot=False, *args, **kwargs):
+def cub_cvit(backbone_name="vit_large_patch16_224", baseline=False, *args, **kwargs):
     """
     Args:
         baseline (bool): If true it returns the baseline model, which in this case it just the vit backbone without concept transformer
@@ -137,7 +136,7 @@ class SlotCVIT(nn.Module):
         self.feature_extractor = timm.create_model(model_name, pretrained=True, num_classes=num_classes)
         del self.feature_extractor.head
 
-        self.classifier = SlotConceptTransformerVIT(
+        self.classifier = ConceptCentricTransformerVIT(
             embedding_dim=self.feature_extractor.embed_dim,
             num_classes=num_classes,
             attention_dropout=attention_dropout,
@@ -254,7 +253,7 @@ class ConceptTransformerVIT(nn.Module):
         return out, unsup_concept_attn, concept_attn, spatial_concept_attn
 
 
-class SlotConceptTransformerVIT(nn.Module):
+class ConceptCentricTransformerVIT(nn.Module):
     """Processes spatial and non-spatial concepts in parallel and aggregates the log-probabilities at the end.
     The difference with the version in ctc.py is that instead of using sequence pooling for global concepts it
     uses the embedding of the cls token of the VIT
@@ -279,9 +278,10 @@ class SlotConceptTransformerVIT(nn.Module):
         # Unsupervised concepts
         self.n_unsup_concepts = n_unsup_concepts
         if n_unsup_concepts > 0:
-            self.unsup_concept_slot_attention = SlotAttention(num_iterations=1, num_slots=n_unsup_concepts,
-                                                              slot_size=embedding_dim,
-                                                              mlp_hidden_size=embedding_dim, input_size=embedding_dim)
+            self.unsup_concept_slot_attention = ConceptSlotAttention(num_iterations=1, num_slots=n_unsup_concepts,
+                                                                     slot_size=embedding_dim,
+                                                                     mlp_hidden_size=embedding_dim,
+                                                                     input_size=embedding_dim)
             self.unsup_concept_slot_pos = nn.Parameter(torch.zeros(1, 1, n_unsup_concepts * embedding_dim),
                                                        requires_grad=True)
             self.unsup_concept_tranformer = CrossAttention(
@@ -296,8 +296,9 @@ class SlotConceptTransformerVIT(nn.Module):
         self.n_concepts = n_concepts
         if n_concepts > 0:
             # JINYUNG HONG
-            self.concept_slot_attention = SlotAttention(num_iterations=1, num_slots=n_concepts, slot_size=embedding_dim,
-                                                        mlp_hidden_size=embedding_dim, input_size=embedding_dim)
+            self.concept_slot_attention = ConceptSlotAttention(num_iterations=1, num_slots=n_concepts,
+                                                               slot_size=embedding_dim,
+                                                               mlp_hidden_size=embedding_dim, input_size=embedding_dim)
             self.concept_slot_pos = nn.Parameter(torch.zeros(1, 1, n_concepts * embedding_dim), requires_grad=True)
             self.concept_tranformer = CrossAttention(
                 dim=embedding_dim,
