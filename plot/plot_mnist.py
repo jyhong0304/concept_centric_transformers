@@ -70,6 +70,6 @@ def plot_wrong_prediction(num):
 
 
 # Load checkpoint of trained model
-name_ckpt = 'YOUR_MODEL.ckpt'
-model, data_module = load_exp(name_ckpt)
+NAME_CKPT = 'YOUR_MODEL.ckpt'
+model, data_module = load_exp(NAME_CKPT)
 results = batch_predict_results(Trainer(gpus=1).predict(model, data_module))
