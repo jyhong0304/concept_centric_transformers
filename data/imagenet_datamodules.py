@@ -10,7 +10,7 @@ class ImageNetDatamodule(pl.LightningDataModule):
                  batch_size: int = 32,
                  num_workers: int = 8,
                  data_dir: str = '~/datasets/',
-                 val_size: int = 10000,
+                 val_size: int = 20000,
                  **kwargs
                  ):
         super().__init__()
@@ -71,7 +71,7 @@ class ImageNetDatamodule(pl.LightningDataModule):
 
 
 if __name__ == '__main__':
-    data_dir = '/working/jhong53/datasets/imagenet/imagenet'
+    data_dir = '/data/jhong53/datasets/imagenet/'
     explanation = ImageNetDatamodule(data_dir=data_dir)
     explanation.prepare_data()
     explanation.setup()

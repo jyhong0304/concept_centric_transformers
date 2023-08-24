@@ -2,6 +2,7 @@ from torch.utils.data import random_split
 from .data_utils import split_dataset, ExplanationDataset
 import torchvision.datasets as datasets
 import os
+import numpy as np
 
 class ImageNetDataset(ExplanationDataset):
     def __init__(self, dataset, num_classes=1000):
@@ -13,12 +14,10 @@ class ImageNetDataset(ExplanationDataset):
 
     def get_data(self, idx):
         inputs, label = self.dataset[idx]
-
         return inputs, label
 
     def get_explanations(self, idx):
-
-        return None
+        return np.nan
 
 
 def get_imagenet(data_dir, train_transform, test_transform, val_size, random_train_subset=False):
