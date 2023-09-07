@@ -8,7 +8,8 @@ sys.path.append(os.path.abspath("."))
 
 
 def kwargs_to_cmd(kwargs):
-    cmd = "python3 cvittiny_cifar100superclass.py "
+    python_cmd = "python3"
+    cmd = f"{python_cmd} cvittiny_cifar100superclass.py "
     for flag, val in kwargs.items():
         cmd += f"--{flag}={val} "
 
@@ -28,7 +29,7 @@ def run_exp(gpu_num, in_queue):
         print(f"==> Starting experiment {kwargs_to_cmd(experiment)}")
         os.system(kwargs_to_cmd(experiment))
 
-        with open("slotcvittiny_output.txt", "a+") as f:
+        with open("cifar100superclass_slotcvittiny_output.txt", "a+") as f:
             f.write(
                 f"Finished experiment {experiment} in {str((time.time() - before) / 60.0)}."
             )
@@ -38,6 +39,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpus', default=0, type=lambda x: [a for a in x.split("|") if a])
     parser.add_argument('--seeds', default=1, type=lambda x: [a for a in x.split("|") if a])
+    parser.add_argument('--data_dir', default='~/datasets/', type=str)
     args = parser.parse_args()
 
     gpus = args.gpus
@@ -46,8 +48,9 @@ def main():
     experiments = []
     for seed in seeds:
         kwargs = {
-            "model": "cifar100superclass_slotcvit",
+            "model": "cifar100superclass_slotcvit_sa",
             "seed": seed,
+            "data_dir": args.data_dir,
         }
 
         experiments.append(kwargs)

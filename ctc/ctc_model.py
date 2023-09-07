@@ -8,8 +8,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.nn import functional as F
 from torchmetrics.functional.classification.accuracy import accuracy
+from .loss import concepts_cost, concepts_sparsity_cost, spatial_concepts_cost
 import ctc
-from ctc import concepts_cost, concepts_sparsity_cost, spatial_concepts_cost
 
 
 class CTCModel(pl.LightningModule):
@@ -69,11 +69,19 @@ class CTCModel(pl.LightningModule):
         """
         outputs, unsup_concept_attn, concept_attn, spatial_concept_attn = self.model(x)
         logits = F.log_softmax(outputs, dim=-1)
+
         return logits, unsup_concept_attn, concept_attn, spatial_concept_attn
 
     def training_step(self, batch, batch_idx):
-        logits, preds, ce_loss, acc, expl_loss, l1_loss, _, _, _ = self.shared_step(batch, task=self.task,
-                                                                                    num_classes=self.num_classes)
+        (
+            logits,
+            preds,
+            ce_loss,
+            acc,
+            expl_loss,
+            l1_loss,
+            _, _, _
+        ) = self.shared_step(batch, task=self.task, num_classes=self.num_classes)
         loss = ce_loss
         if self.hparams.expl_lambda > 0:
             loss = loss + self.hparams.expl_lambda * expl_loss
@@ -96,8 +104,15 @@ class CTCModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        logits, preds, ce_loss, acc, expl_loss, l1_loss, _, _, _ = self.shared_step(batch, task=self.task,
-                                                                                    num_classes=self.num_classes)
+        (
+            logits,
+            preds,
+            ce_loss,
+            acc,
+            expl_loss,
+            l1_loss,
+            _, _, _
+        ) = self.shared_step(batch, task=self.task, num_classes=self.num_classes)
         self.log_dict(
             {
                 "val_ce_loss": ce_loss,
@@ -113,8 +128,15 @@ class CTCModel(pl.LightningModule):
         return acc
 
     def test_step(self, batch, batch_idx):
-        logits, preds, ce_loss, acc, expl_loss, l1_loss, _, _, _ = self.shared_step(batch, task=self.task,
-                                                                                    num_classes=self.num_classes)
+        (
+            logits,
+            preds,
+            ce_loss,
+            acc,
+            expl_loss,
+            l1_loss,
+            _, _, _
+        ) = self.shared_step(batch, task=self.task, num_classes=self.num_classes)
         self.log_dict(
             {
                 "test_ce_loss": ce_loss,
@@ -141,9 +163,9 @@ class CTCModel(pl.LightningModule):
             concept_attn,
             spatial_concept_attn,
         ) = self.shared_step(batch, task=self.task, num_classes=self.num_classes)
-
         correct = preds == y
         idx = batch_idx * len(x) + torch.arange(len(x))
+
         return {
             "idx": idx,
             "preds": preds,
@@ -163,9 +185,7 @@ class CTCModel(pl.LightningModule):
 
         ce_loss = F.nll_loss(logits, y)
         acc = accuracy(preds, y, task=task, num_classes=num_classes)
-        expl_loss = concepts_cost(concept_attn, expl) + spatial_concepts_cost(
-            spatial_concept_attn, spatial_expl
-        )
+        expl_loss = concepts_cost(concept_attn, expl) + spatial_concepts_cost(spatial_concept_attn, spatial_expl)
         l1_loss = concepts_sparsity_cost(concept_attn, spatial_concept_attn)
 
         return (
@@ -205,16 +225,13 @@ def run_exp(args):
     project_name = getattr(args, "project_name", args.ctc_model)
     run_name = getattr(args, "run_name", f"{args.data_name}_expl{args.expl_lambda}")
 
+    log_folder_name = f"{args.ctc_model}-epochs={args.max_epochs}"
     if hasattr(args, "n_train_samples"):
-        log_folder_name = "{}-epochs={}-lr={}-n_samples={}-seed={}".format(args.ctc_model, args.max_epochs,
-                                                                           args.learning_rate, args.n_train_samples,
-                                                                           args.seed)
-    else:
-        log_folder_name = "{}-epochs={}-lr={}-seed={}".format(args.ctc_model, args.max_epochs,
-                                                              args.learning_rate,
-                                                              args.seed)
-        if getattr(args, "baseline"):
-            log_folder_name += "--baseline"
+        log_folder_name += f"-n_samples={args.n_train_samples}"
+    log_folder_name += f"-lr={args.learning_rate}-expl_lambda={args.expl_lambda}-attention_sparsity={args.attention_sparsity}"
+    log_folder_name += f"-seed={args.seed}"
+    if getattr(args, "baseline"):
+        log_folder_name += "--baseline"
 
     logger = TensorBoardLogger(".", name="logs", version=log_folder_name)
 
@@ -264,6 +281,7 @@ def get_trainer(max_epochs, logger, callbacks, args, debug=False):
         )
     else:
         if torch.cuda.device_count() > 0 and not args.no_cuda:
+            # Modify this if you want to train your model with multi-gpus.
             trainer = pl.Trainer(
                 logger=logger,
                 max_epochs=max_epochs,

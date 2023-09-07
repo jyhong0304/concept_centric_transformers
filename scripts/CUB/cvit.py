@@ -8,7 +8,8 @@ sys.path.append(os.path.abspath("."))
 
 
 def kwargs_to_cmd(kwargs):
-    cmd = "python3 cvit_cub.py "
+    python_cmd = "python3"
+    cmd = f"{python_cmd} cvit_cub.py "
     for flag, val in kwargs.items():
         cmd += f"--{flag}={val} "
 
@@ -28,7 +29,7 @@ def run_exp(gpu_num, in_queue):
         print(f"==> Starting experiment {kwargs_to_cmd(experiment)}")
         os.system(kwargs_to_cmd(experiment))
 
-        with open("cvit_output.txt", "a+") as f:
+        with open("cub_cvit_output.txt", "a+") as f:
             f.write(
                 f"Finished experiment {experiment} in {str((time.time() - before) / 60.0)}."
             )
@@ -48,6 +49,7 @@ def main():
     for seed in seeds:
         kwargs = {
             "seed": seed,
+            "model": "cub_cvit",
             "data_dir": args.data_dir,
         }
 

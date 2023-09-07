@@ -13,7 +13,7 @@ def get_parser(parser):
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--debug', action='store_true',
                         help='Set debug mode in Lightning module')
-    parser.add_argument('--data_dir', default='/data/jhong53/datasets/', type=str,
+    parser.add_argument('--data_dir', default='~/datasets/', type=str,
                         help='dataset root directory')
     parser.add_argument('--weight_decay', default=1e-3, type=float,
                         help='weight decay (default: 1e-3)')
@@ -34,7 +34,7 @@ def get_parser(parser):
     parser.add_argument('--seed', default=42, type=int, help='random seed')
     parser.add_argument('--task', default='multiclass', type=str,
                         help='task type')
-    parser.add_argument('--model', default='cifar100superclass_cvit', type=str,
+    parser.add_argument('--model', default='cifar100superclass_slotcvit', type=str,
                         help='model type')
     parser.add_argument('--no_cuda', action='store_true', help='no use CUDA')
     parser.add_argument('--gpu', default=1, type=int, help='GPU id')

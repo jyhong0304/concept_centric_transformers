@@ -8,7 +8,8 @@ sys.path.append(os.path.abspath("."))
 
 
 def kwargs_to_cmd(kwargs):
-    cmd = "python3 ctc_mnist.py "
+    python_cmd = "/data/jhong53/anaconda3/envs/py38CT/bin/python3"
+    cmd = f"{python_cmd} cvit_imagenet.py "
     for flag, val in kwargs.items():
         cmd += f"--{flag}={val} "
 
@@ -28,7 +29,7 @@ def run_exp(gpu_num, in_queue):
         print(f"==> Starting experiment {kwargs_to_cmd(experiment)}")
         os.system(kwargs_to_cmd(experiment))
 
-        with open("ctc_epochs10_output.txt", "a+") as f:
+        with open("imagenet_cvit_output.txt", "a+") as f:
             f.write(
                 f"Finished experiment {experiment} in {str((time.time() - before) / 60.0)}."
             )
@@ -38,6 +39,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpus', default=0, type=lambda x: [a for a in x.split("|") if a])
     parser.add_argument('--seeds', default=1, type=lambda x: [a for a in x.split("|") if a])
+    parser.add_argument('--data_dir', default='~/imagenet/', type=str)
     args = parser.parse_args()
 
     gpus = args.gpus
@@ -46,12 +48,10 @@ def main():
     experiments = []
     for seed in seeds:
         kwargs = {
-            "learning_rate": 0.0004,
-            "max_epochs": 10,
-            "warmup": 20,
-            "batch_size": 32,
-            "expl_lambda": 2.0,
+            "learning_rate": 5e-5,
+            "model": "imagenet_cvit_small",
             "seed": seed,
+            "data_dir": args.data_dir,
         }
 
         experiments.append(kwargs)

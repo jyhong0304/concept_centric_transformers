@@ -390,3 +390,170 @@ class ConceptSlotAttention(nn.Module):
             slots = slots.view(-1, self.num_slots, self.slot_size)
 
         return slots, attn_vis
+
+
+class ConceptISA(nn.Module):
+    """
+    ISA module for extracting concepts.
+    We refer to "Object Representations as Fixed Points" to implement it.
+    [https://arxiv.org/abs/2207.00787]
+    We simplify this by removing the last LayerNorm and MLP.
+    """
+
+    def __init__(
+            self,
+            num_iterations,
+            slot_size,
+            mlp_hidden_size,
+            epsilon=1e-8,
+            drop_path=0.2,
+    ):
+        super().__init__()
+        self.slot_size = slot_size
+        self.epsilon = epsilon
+        self.num_iterations = num_iterations
+
+        self.norm_feature = nn.LayerNorm(slot_size)
+        self.norm_slots = nn.LayerNorm(slot_size)
+
+        self.project_k = linear(slot_size, slot_size, bias=False)
+        self.project_v = linear(slot_size, slot_size, bias=False)
+        self.project_q = linear(slot_size, slot_size, bias=False)
+
+        self.gru = gru_cell(slot_size, slot_size)
+
+        self.drop_path = DropPath(drop_path) if drop_path > 0 else nn.Identity()
+
+    def forward(self, features, slots_init):
+        # `feature` has shape [batch_size, num_feature, inputs_size].
+        features = self.norm_feature(features)
+        k = self.project_k(features)  # Shape: [B, num_features, slot_size]
+        v = self.project_v(features)  # Shape: [B, num_features, slot_size]
+
+        B, N, D = v.shape
+        slots = slots_init
+        slots = self._iterate(lambda z: self._step(z, k, v), slots, self.num_iterations)
+        slots = self._step(slots.detach(), k, v)
+
+        return slots, None
+
+    def _iterate(self, f, x, num_iters):
+        for _ in range(num_iters):
+            x = f(x)
+        return x
+
+    def _step(self, slots, k, v):
+        B, N, D = v.shape
+        q = self.project_q(slots)
+        # Attention
+        scale = D ** -0.5
+        attn_logits = torch.einsum('bid,bjd->bij', q, k) * scale
+        attn = F.softmax(attn_logits, dim=1)
+        # Weighted mean
+        attn_sum = torch.sum(attn, dim=-1, keepdim=True) + self.epsilon
+        attn_wm = attn / attn_sum
+        updates = torch.einsum('bij, bjd->bid', attn_wm, v)
+        # Update slots
+        slots = self.gru(
+            updates.reshape(-1, D),
+            slots.reshape(-1, D)
+        )
+        slots = slots.reshape(B, -1, D)
+
+        return slots
+
+
+class ConceptQuerySlotAttention(nn.Module):
+    """
+    BO-QSA module for extracting concepts.
+    We refer to "Improving Object-centric Learning with Query Optimization" to implement it.
+    [https://arxiv.org/abs/2210.08990]
+    We simplify this by removing the last LayerNorm and MLP.
+    """
+
+    def __init__(
+            self,
+            num_iterations,
+            slot_size,
+            mlp_hidden_size,
+            truncate='bi-level',
+            epsilon=1e-8,
+            drop_path=0.2,
+    ):
+        super().__init__()
+        self.slot_size = slot_size
+        self.epsilon = epsilon
+        self.truncate = truncate
+        self.num_iterations = num_iterations
+
+        self.norm_feature = nn.LayerNorm(slot_size)
+        self.norm_slots = nn.LayerNorm(slot_size)
+
+        self.project_k = linear(slot_size, slot_size, bias=False)
+        self.project_v = linear(slot_size, slot_size, bias=False)
+        self.project_q = linear(slot_size, slot_size, bias=False)
+
+        self.gru = gru_cell(slot_size, slot_size)
+
+        self.drop_path = DropPath(drop_path) if drop_path > 0 else nn.Identity()
+
+    def forward(self, features, slots_init):
+        # `feature` has shape [batch_size, num_feature, inputs_size].
+        features = self.norm_feature(features)
+        k = self.project_k(features)  # Shape: [B, num_features, slot_size]
+        v = self.project_v(features)  # Shape: [B, num_features, slot_size]
+
+        B, N, D = v.shape
+        slots = slots_init
+        # Multiple rounds of attention.
+        for i in range(self.num_iterations):
+            if i == self.num_iterations - 1:
+                slots = slots.detach() + slots_init - slots_init.detach()
+            slots_prev = slots
+            slots = self.norm_slots(slots)
+            q = self.project_q(slots)
+            # Attention
+            scale = D ** -0.5
+            attn_logits = torch.einsum('bid,bjd->bij', q, k) * scale
+            attn = F.softmax(attn_logits, dim=1)
+
+            # Weighted mean
+            attn_sum = torch.sum(attn, dim=-1, keepdim=True) + self.epsilon
+            attn_wm = attn / attn_sum
+            updates = torch.einsum('bij, bjd->bid', attn_wm, v)
+
+            # Update slots
+            slots = self.gru(
+                updates.reshape(-1, D),
+                slots_prev.reshape(-1, D)
+            )
+            slots = slots.reshape(B, -1, D)
+
+        return slots, attn
+
+
+def linear(in_features, out_features, bias=True, weight_init='xavier', gain=1.):
+    m = nn.Linear(in_features, out_features, bias)
+
+    if weight_init == 'kaiming':
+        nn.init.kaiming_uniform_(m.weight, nonlinearity='relu')
+    else:
+        nn.init.xavier_uniform_(m.weight, gain)
+
+    if bias:
+        nn.init.zeros_(m.bias)
+
+    return m
+
+
+def gru_cell(input_size, hidden_size, bias=True):
+    m = nn.GRUCell(input_size, hidden_size, bias)
+
+    nn.init.xavier_uniform_(m.weight_ih)
+    nn.init.orthogonal_(m.weight_hh)
+
+    if bias:
+        nn.init.zeros_(m.bias_ih)
+        nn.init.zeros_(m.bias_hh)
+
+    return m

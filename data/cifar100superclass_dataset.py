@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import random_split
 from torchvision.datasets import CIFAR100
 from .data_utils import ExplanationDataset, split_dataset
 
@@ -46,8 +46,8 @@ class CIFAR100SuperclassDataset(ExplanationDataset):
 
 
 def get_cifar100superclass(data_dir, train_transform, test_transform, val_size, random_train_subset=False):
-    trainset = CIFAR100(root=data_dir, transform=train_transform, train=True)
-    test = CIFAR100(train=False, root=data_dir, transform=test_transform)
+    trainset = CIFAR100(root=data_dir, transform=train_transform, train=True, download=True)
+    test = CIFAR100(train=False, root=data_dir, transform=test_transform, download=True)
 
     if not random_train_subset:
         val, train = split_dataset(trainset, val_size)

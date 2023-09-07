@@ -1,5 +1,7 @@
 from .cub2011parts import CUB2011Parts_dataset
 from .cub2011parts_datamodules import CUB2011Parts
+from .cub2011_reduced_dataset import CUB_200_Reduced
+from .cub2011_reduced_datamodule import CUB2011ReducedDataModule
 from .mnist_dataset import explanation_mnist_dataset
 from .mnist_datamodules import ExplanationMNIST
 from .cifar100superclass_datamodules import CIFAR100SuperClass
@@ -16,6 +18,8 @@ __all__ = [
     "ExplanationMNIST",
     "CUB2011Parts_dataset",
     "CUB2011Parts",
+    "CUB_200_Reduced",
+    "CUB2011ReducedDataModule",
     "ImageNetDatamodule",
     "ImageNetDataset",
     "CIFAR100SuperClass",

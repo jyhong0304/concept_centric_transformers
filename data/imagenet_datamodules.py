@@ -10,7 +10,7 @@ class ImageNetDatamodule(pl.LightningDataModule):
                  batch_size: int = 32,
                  num_workers: int = 8,
                  data_dir: str = '~/datasets/',
-                 val_size: int = 20000,
+                 val_size: int = 10000,
                  **kwargs
                  ):
         super().__init__()
@@ -43,7 +43,7 @@ class ImageNetDatamodule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         trainset, valset, testset = get_imagenet(data_dir=self.data_dir, train_transform=self.train_transform,
-                                                           test_transform=self.test_transform, val_size=self.val_size)
+                                                 test_transform=self.test_transform, val_size=self.val_size)
 
         # Assign train/val datasets for use in dataloaders
         if stage == 'fit' or stage is None:
@@ -71,7 +71,7 @@ class ImageNetDatamodule(pl.LightningDataModule):
 
 
 if __name__ == '__main__':
-    data_dir = '/data/jhong53/datasets/imagenet/'
+    data_dir = '~/datasets/imagenet/'
     explanation = ImageNetDatamodule(data_dir=data_dir)
     explanation.prepare_data()
     explanation.setup()

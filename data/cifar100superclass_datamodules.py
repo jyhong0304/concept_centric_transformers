@@ -1,8 +1,6 @@
-import torch
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from torchvision import datasets
 from .cifar100superclass_dataset import get_cifar100superclass
 
 
@@ -10,7 +8,7 @@ class CIFAR100SuperClass(pl.LightningDataModule):
     def __init__(self,
                  batch_size: int = 32,
                  num_workers: int = 8,
-                 data_dir: str = '~/datasets',
+                 data_dir: str = '~/datasets/',
                  val_size: int = 5000,
                  **kwargs
                  ):

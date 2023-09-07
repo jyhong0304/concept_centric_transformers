@@ -1,9 +1,9 @@
 from torch.utils.data import random_split, Dataset
-from .data_utils import split_dataset, ExplanationDataset
 import os
 import numpy as np
 from PIL import Image
 import torch
+from .data_utils import split_dataset
 
 
 def get_name(root, mode_folder=True):
@@ -74,4 +74,4 @@ def get_imagenet(data_dir, train_transform, test_transform, val_size, random_tra
     else:
         val, train = random_split(trainset, [val_size, len(trainset) - val_size])
 
-    return train, val, test
+    return trainset, val, test

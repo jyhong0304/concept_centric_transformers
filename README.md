@@ -1,16 +1,17 @@
 # Concept Centric Transformer
 This is the official implementation of Concept-Centric Transformers.
-<img src="figs/overall_architecture.png" alt="overall_architecture_cct">
+<p float="left">
+  <img src="figs/main_architecture.png" alt="main_architecture_cct" width="63%"/>
+  <img src="figs/interpretable_broadcast.png" alt="interpretable_broadcast" width="27%" />
+</p>
 
 ## Abstract
-Attention mechanisms have greatly improved the performance of deep-learning models on visual, NLP, and multimodal tasks while also providing tools to aid in the model's interpretability. 
-In particular, attention scores over input regions or concrete image features can be used to measure how much the attended elements contribute to the model inference. 
-The recently proposed Concept Transformer (CT) generalizes the Transformer attention mechanism from such low-level input features to more abstract, intermediate-level latent concepts that better allow human analysts to more directly assess an explanation for the reasoning of the model about any particular output classification. 
-However, the concept learning employed by CT implicitly assumes that across every image in a class, each image patch makes the same contribution to concepts that characterize membership in that class. 
-Instead of using the CT's image-patch-centric concepts, object-centric concepts could lead to better classification performance as well as better explainability. 
-Thus, we propose *Concept-Centric Transformers (CCT)*, a new family of concept transformers that provides more robust explanations and performance by integrating a novel concept-extraction module based on object-centric learning. 
-We test our proposed CCT against the CT and several other existing approaches on classification problems for MNIST (odd/even), CIFAR100 (super-classes), and CUB-200-2011 (bird species). 
-Our experiments demonstrate that CCT not only achieves significantly better classification accuracy than all selected benchmark classifiers across all three of our test problems, but it generates more consistent concept-based explanations of classification output when compared to CT.
+To explain "black-box" properties of AI models, many approaches, such as *post hoc* and intrinsically interpretable models, have been proposed to provide plausible explanations that identify human-understandable features/concepts that a trained model uses to make predictions, and attention mechanisms have been widely used to aid in model interpretability by visualizing that information. 
+However, the problem of configuring an interpretable model that effectively communicates and coordinates among computational modules has received less attention. 
+A recently proposed shared global workspace theory demonstrated that networks of distributed modules can benefit from sharing information with a bandwidth-limited working memory because the communication constraints encourage specialization, compositionality, and synchronization among the modules.
+Inspired by this, we consider how such shared working memories can be realized to build intrinsically interpretable models with better interpretability and performance. 
+Toward this end, we propose *Concept-Centric Transformers*, a simple yet effective configuration of the shared global workspace for interpretability consisting of: i) an object-centric-based architecture for extracting semantic concepts from input features, ii) a cross-attention mechanism between the learned concept and input embeddings, and iii) standard classification and additional explanation losses to allow human analysts to directly assess an explanation for the model's classification reasoning. 
+We test our approach against other existing concept-based methods on classification tasks for various datasets, including CIFAR100 (super-classes), CUB-200-2011 (bird species), and ImageNet, and we show that our model achieves better classification accuracy than all selected methods across all problems but also generates more consistent concept-based explanations of classification output.
 
 ## Requirments
 ```bash
@@ -18,46 +19,29 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-We provide the python files in ```scripts``` to reproduce all experiments in our paper.
-All datasets are automatically downloaded if you don't have.
-
-### MNIST Odd/Even
-
-#### With the full training sample and 10 epochs
-You can execute our CCT with the lists of GPUs (1, 2, 3) and random seed (1, 2, 3):
-
-```bash
-python3 scripts/MNIST_OddEven/slotctc_epochs10.py --gpus 1|2|3 --seeds 1|2|3
-```
-
-For CT, you can run ```scripts/MNIST_OddEven/ctc_epochs10.py``` with the same arguements above.
-
-#### With the fewer samples from 100 to 7000
-You can execute our CCT with the lists of GPUs (0, 1, 2, 3) and random seed (1, 2, 3):
-
-```bash
-python3 scripts/MNIST_OddEven/slotctc_training_samples.py --gpus 0|1|2|3 --seeds 1|2|3
-```
-
-For CT, you can run ```scripts/MNIST_OddEven/ctc_training_samples.py``` with the same arguements above.
-
 
 ### CIFAR100 Super-class
 
-You can execute ViT-Tiny backbone only:
+You can execute ViT-T backbone only:
 
 ```bash
-python3 scripts/CIFAR100_Superclass/vittiny_backbone.py --gpus 1|2|3 --seeds 1|2|3
+python3 scripts/CIFAR100_Superclass/vittiny_backbone.py --gpus 1|2|3 --seeds 1|2|3 --data_dir YOUR_DATA_PATH
 ```
 
 You can execute our CCT:
 
 ```bash
-python3 scripts/CIFAR100_Superclass/slotcvittiny.py --gpus 1|2|3 --seeds 1|2|3
+python3 scripts/CIFAR100_Superclass/slotcvittiny.py --gpus 1|2|3 --seeds 1|2|3 --data_dir YOUR_DATA_PATH
 ```
+We support three configurations of CCTs as follows:
+* ViT-T + SA (Default): ```cifar100superclass_slotcvit_sa```
+* ViT-T + ISA: ```cifar100superclass_slotcvit_isa```
+* Vit-T + BO-QSA: ```cifar100superclass_slotcvit_qsa```
+
+For testing CCTs, specify the above model name that you want to test in line 49 of ```scripts/CIFAR100_Superclass/slotcvittiny.py```.
+
 
 For CT, you can run ```scripts/CIFAR100_Superclass/cvittiny.py``` with the same arguements above.
-
 
 
 ### CUB-200-2011
@@ -68,12 +52,54 @@ You can execute our CCT:
 python3 scripts/CUB/slotcvit.py --gpus 1|2|3 --seeds 1|2|3 --data_dir YOUR_DATA_PATH/cub2011/
 ```
 
+We support nine configurations of CCTs as follows:
+* ViT-L + SA (Default): ```cub_slotcvit_sa```
+* ViT-L + ISA: ```cub_slotcvit_isa```
+* ViT-L + BO-QSA: ```cub_slotcvit_qsa```
+* SwinT-L + SA: ```cub_slotcswin_sa```
+* SwinT-L + ISA: ```cub_slotcswin_isa```
+* SwinT-L + BO-QSA: ```cub_slotcswin_qsa```
+* ConvNeXt-L + SA: ```cub_slotc_convnext_sa```
+* ConvNeXt-L + ISA: ```cub_slotc_convnext_isa```
+* ConvNeXt-L + BO-QSA: ```cub_slotc_convnext_qsa```
+
+For testing CCTs, specify the above model name that you want to test in line 51 of ```scripts/CUB/slotcvit.py``` with the hyperparameters.
+Please check the detail of hyperparameter setup for each model in Appendix of our paper.
+
 For CT, you can run ```scripts/CUB/cvit.py``` with the same arguements above.
 
+
+### ImageNet
+
+You can execute ViT-S backbone only:
+
+```bash
+python3 scripts/ImageNet/vitsmall_backbone.py --gpus 1|2|3 --seeds 1|2|3 --data_dir YOUR_DATA_PATH/imagenet/
+```
+
+You can execute our CCT:
+
+```bash
+python3 scripts/ImageNet/slotcvit.py --gpus 1|2|3 --seeds 1|2|3 --data_dir YOUR_DATA_PATH/imagenet/
+```
+
+We support three configurations of CCTs as follows:
+* ViT-S + SA (Default): ```imagenet_slotcvit_small_sa```
+* ViT-S + ISA: ```imagenet_slotcvit_small_isa```
+* ViT-S + BO-QSA: ```imagenet_slotcvit_small_qsa```
+
+For testing CCTs, specify the above model name that you want to test in line 51 of ```scripts/ImageNet/slotcvit.py```.
+
+For CT, you can run ```scripts/ImageNet/cvit.py```.
 
 
 ## Acknowledgement
 Our source codes are based on:
-* [IBM/Concept Transformer](https://github.com/IBM/concept_transformer)
-* [Google/Slot Attention](https://github.com/google-research/google-research/tree/master/slot_attention)
+* [IBM/Concept Transformer](https://github.com/IBM/concept_transformer): We compare our model with this as one of the baseline models.
+* [Google/Slot Attention](https://github.com/google-research/google-research/tree/master/slot_attention): We leverage it as a working memory module.
+* [BO-QSA](https://github.com/YuLiu-LY/BO-QSA): We use it as a working memory module.
+* [HuggingFace/pytorch-image-models (timm)](https://github.com/huggingface/pytorch-image-models/tree/main/timm): We employ their backbones, including ViT, SwinT and ConvNeXt.
+
+For visualizing concepts, we refer to the experimental setups from:
+* [BotCL](https://github.com/wbw520/BotCL)
 
