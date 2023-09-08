@@ -13,10 +13,11 @@ import torch.nn.functional as F
 import copy
 import matplotlib.cm as mpl_color_map
 
-shutil.rmtree('/data/kpark53/imagenet_vis/vis_20/', ignore_errors=True)
-shutil.rmtree('/data/kpark53/imagenet_vis/vis_pp_20/', ignore_errors=True)
-os.makedirs('/data/kpark53/imagenet_vis/vis_20/', exist_ok=True)
-os.makedirs('/data/kpark53/imagenet_vis/vis_pp_20/', exist_ok=True)
+# Define constants for directory paths and threshold
+DATA_DIR = './imagenet_vis/'
+VIS_DIR = '/vis_20/'  # Change this as needed
+VIS_PP_DIR = '/vis_pp_20/'  # Change this as needed
+THRESHOLD = 0.5 # Change this as needed
 
 
 def unnorm_mnist(img):
@@ -25,45 +26,33 @@ def unnorm_mnist(img):
     img = img.transpose(0, 2).transpose(0, 1)
     return img * sd + mu
 
-def normalize_attn(attn):
-    # Find the maximum and minimum values in attn
-    max_val = attn.max()
-    min_val = attn.min()
 
-    # Normalize attn using min-max scaling to [0, 1] range
-    normalized_attn = (attn - min_val) / (max_val - min_val)
-    return normalized_attn
-
-def vis(slots_vis_raw, size, thres, loc=None, index=None):
-
-    b = slots_vis_raw.size()[0]  # torch.Size([32, 10, 196]) b=32 bcl
-    if loc is not None:
-        loc1, loc2 = loc
-    else:
-        loc1 = "/data/kpark53/imagenet_vis/vis_pp_20"
+def vis(slots_vis_raw, size, loc=None, index=None):
+    global THRESHOLD  # Use the global threshold variable
+    b = slots_vis_raw.size()[0]  
 
     for i in range(b):
         print(f"Processing batch {i+1}/{b}")
-        slots_vis = slots_vis_raw[i]  # 196,10   LC
+        slots_vis = slots_vis_raw[i]  
 
         slots_vis_mask = ((slots_vis - slots_vis.min()) / (slots_vis.max() - slots_vis.min()) * 1.).reshape(
-            slots_vis.shape[:1] + (int(size) * 2, int(size) * 2))  
-        
-        slots_vis_mask_new = (slots_vis_mask > thres).float()
+            slots_vis.shape[:1] + (int(size) * 2, int(size) * 2)) #slot mask normalization [0,1]
+
+        slots_vis_mask_new = (slots_vis_mask > THRESHOLD).float() #Take the only slots that are above the threshold (threshold is user-defined)
 
         slots_vis = ((slots_vis - slots_vis.min()) / (slots_vis.max() - slots_vis.min()) * 255.).reshape(
-            slots_vis.shape[:1] + (int(size) * 2, int(size) * 2)) 
+            slots_vis.shape[:1] + (int(size) * 2, int(size) * 2)) #slot mask normalization [0,255] for visualization
 
-        
-        slots_vis *= slots_vis_mask_new
+        slots_vis *= slots_vis_mask_new #Only significant slots are kept
 
-        slots_vis = (slots_vis.cpu().detach().numpy()).astype(np.uint8)  
+        slots_vis = (slots_vis.cpu().detach().numpy()).astype(np.uint8)
         for id, image in enumerate(slots_vis):
-            image = Image.fromarray(image, mode='L').resize([224, 224], resample=Image.BILINEAR)
-            
+            image = Image.fromarray(image, mode='L').resize([224, 224], resample=Image.BILINEAR) #slot mask resizing to 224x224, which is the size of original image from dataset
+
             print(f"Saving image {i}_slot_{id:d}.png")
-            image.save(f'{loc1}/{i}_slot_{id:d}.png')
+            image.save(os.path.join(loc, f'{i}_slot_{id:d}.png'))
         print(f"Batch {i+1}/{b} processed.")
+
 
 def apply_colormap_on_image(org_im, activation, colormap_name):
     """
@@ -89,49 +78,59 @@ def apply_colormap_on_image(org_im, activation, colormap_name):
     return no_trans_heatmap, heatmap_on_image
 
 
-def main():
+def main(data_dir, vis_dir, vis_pp_dir, threshold):
+    global DATA_DIR, VIS_DIR, VIS_PP_DIR, THRESHOLD  # Access constants
+
+    DATA_DIR = data_dir  # Set data directory(ckpt)
+    VIS_DIR = vis_dir  # Set original image directory
+    VIS_PP_DIR = vis_pp_dir  # Set slot mask directory
+    THRESHOLD = threshold  # Set threshold
+
     print("Loading model and data...")
-    run_path = "/data/jhong53/projects/concept_centric_transformers/imagenet_slotcvit_small_qsa_20/ImageNetDatamodule_expl0.0/imagenet_slotcvit_small_qsa_20-epochs=10-lr=0.0001-expl_lambda=0.0-attention_sparsity=0.0-seed=1.ckpt"
+    run_path = os.path.join(DATA_DIR, "your_model_path_here.ckpt")  # Change this as needed
     model, data_module = load_exp(run_path)
     results = batch_predict_results(Trainer().predict(model, data_module))
     
-    #vis
-    spa_cpt_attn = results['spatial_concept_attn']
 
-    #original gathering
+    spa_cpt_attn = results['spatial_concept_attn'] # vis attn mask from ckpt dataloader
+
+    # Similar images gathered together based on the C of concept attention mask
     spa_cpt_attn_transposed= torch.transpose(spa_cpt_attn, -2, -1)
     all_output = torch.sum(spa_cpt_attn_transposed, dim=-1)
 
     
     
     print("Visualizing spatial concept attention...")
-    #change threshold as you like [0,1]
-    vis(spa_cpt_attn_transposed, size=7, thres = 0.875)
+    vis(spa_cpt_attn_transposed, size=7)
     print("Finished spatial concept attention visualization")
 
-
+    #Select the top 20 samples from the test dataset for each concept(10), and then generate visualizations that combine the original with the slot make in focus
     print("Generating original+concept visualizations...")
-    for j in range(10):  # num_cpt
-        root = '/data/kpark53/imagenet_vis/' + 'vis_20/' + "cpt" + str(j + 1) + "/"
-        root_slot = '/data/kpark53/imagenet_vis/' + 'vis_pp_20'
+    for j in range(10):  # number of concepts. Here is 10. Defined by user
+        root = DATA_DIR + VIS_DIR + "cpt" + str(j + 1) + "/"
+        root_slot = DATA_DIR + VIS_PP_DIR
         os.makedirs(root, exist_ok=True)
         selected = all_output[:, j]  
-        ids = np.argsort(-selected, axis=0)
-        idx = ids[:20]  # top_samples
+        ids = np.argsort(-selected, axis=0) #sort in descending order
+        idx = ids[:20]  # pick top_20_samples
         for i in range(len(idx)):
             print(f"Processing image {i+1}/{len(idx)} for concept {j+1}/{50}")
-            index = results['idx'][idx[i]].item()
-            img_orl = data_module.imagenet_test[index][0]
-            img_orl = Image.fromarray(np.uint8(unnorm_mnist(img_orl) * 255)).convert("RGBA")
-            img_orl.save(root + f'/origin_{idx[i]}.png')
-            slot_image_path = f'{root_slot}/{idx[i]}_slot_{j}.png'  
-            slot_image = np.array(Image.open(slot_image_path), dtype=np.uint8)
-            heatmap_only, heatmap_on_image = apply_colormap_on_image(img_orl, slot_image, 'jet')
-            heatmap_on_image.save(root + f'mask_{idx[i]}.png')
+            index = results['idx'][idx[i]].item() #index of image in test dataset
+            img_orl = data_module.imagenet_test[index][0] #loading original image from test dataset
+            img_orl = Image.fromarray(np.uint8(unnorm_mnist(img_orl) * 255)).convert("RGBA") #original image from test dataset
+            img_orl.save(root + f'/origin_{idx[i]}.png')  #save original image
+            slot_image_path = f'{root_slot}/{idx[i]}_slot_{j}.png'  #slot mask image path
+            slot_image = np.array(Image.open(slot_image_path), dtype=np.uint8) #load slot mask image
+            _, heatmap_on_image = apply_colormap_on_image(img_orl, slot_image, 'jet') #put slot mask on original image
+            heatmap_on_image.save(root + f'mask_{idx[i]}.png') # save slot mask on original image
             print(f"Processed image {i+1}/{len(idx)} for concept {j+1}/{50}")
     print("Finished generating original+concept visualizations")
 
 
 
 if __name__ == '__main__':
-    main()
+    data_dir = './imagenet_vis/'
+    vis_dir = '/vis_20/' 
+    vis_pp_dir = '/vis_pp_20/'  
+    threshold = 0.5  # change as needed
+    main(data_dir, vis_dir, vis_pp_dir, threshold)
