@@ -467,7 +467,6 @@ class ConceptCentricTransformerVITSA(nn.Module):
         # Non-spatial concepts
         self.n_concepts = n_concepts
         if n_concepts > 0:
-            # JINYUNG HONG
             self.concept_slot_attention = ConceptSlotAttention(num_iterations=1, num_slots=n_concepts,
                                                                slot_size=embedding_dim,
                                                                mlp_hidden_size=embedding_dim, input_size=embedding_dim)
@@ -618,7 +617,6 @@ class ConceptCentricTransformerISA(nn.Module):
         # Non-spatial concepts
         self.n_concepts = n_concepts
         if n_concepts > 0:
-            # JINYUNG HONG
             self.concept_slots_init = nn.Embedding(self.n_concepts, embedding_dim)
             nn.init.xavier_uniform_(self.concept_slots_init.weight)
             self.concept_slot_attention = ConceptISA(num_iterations=num_iterations,
@@ -783,7 +781,6 @@ class ConceptCentricTransformerQSA(nn.Module):
         # Non-spatial concepts
         self.n_concepts = n_concepts
         if n_concepts > 0:
-            # JINYUNG HONG
             self.concept_slots_init = nn.Embedding(self.n_concepts, embedding_dim)
             nn.init.xavier_uniform_(self.concept_slots_init.weight)
             self.concept_slot_attention = ConceptQuerySlotAttention(num_iterations=num_iterations,
