@@ -1,11 +1,10 @@
 # Concept Centric Transformer
-This is the official implementation of Concept-Centric Transformers.
+This is the official implementation of [Concept-Centric Transformers](https://openaccess.thecvf.com/content/WACV2024/papers/Hong_Concept-Centric_Transformers_Enhancing_Model_Interpretability_Through_Object-Centric_Concept_Learning_Within_WACV_2024_paper.pdf).
 <p float="left">
   <img src="figs/main_architecture.png" alt="main_architecture_cct" width="63%"/>
   <img src="figs/interpretable_broadcast.png" alt="interpretable_broadcast" width="27%" />
 </p>
 
-This repository is the official implementation of [concept-centric transformers](https://openaccess.thecvf.com/content/WACV2024/papers/Hong_Concept-Centric_Transformers_Enhancing_Model_Interpretability_Through_Object-Centric_Concept_Learning_Within_WACV_2024_paper.pdf).
 
 ## Abstract
 To explain "black-box" properties of AI models, many approaches, such as *post hoc* and intrinsically interpretable models, have been proposed to provide plausible explanations that identify human-understandable features/concepts that a trained model uses to make predictions, and attention mechanisms have been widely used to aid in model interpretability by visualizing that information. 
