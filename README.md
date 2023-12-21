@@ -5,6 +5,8 @@ This is the official implementation of Concept-Centric Transformers.
   <img src="figs/interpretable_broadcast.png" alt="interpretable_broadcast" width="27%" />
 </p>
 
+This repository is the official implementation of [concept-centric transformers](https://openaccess.thecvf.com/content/WACV2024/papers/Hong_Concept-Centric_Transformers_Enhancing_Model_Interpretability_Through_Object-Centric_Concept_Learning_Within_WACV_2024_paper.pdf).
+
 ## Abstract
 To explain "black-box" properties of AI models, many approaches, such as *post hoc* and intrinsically interpretable models, have been proposed to provide plausible explanations that identify human-understandable features/concepts that a trained model uses to make predictions, and attention mechanisms have been widely used to aid in model interpretability by visualizing that information. 
 However, the problem of configuring an interpretable model that effectively communicates and coordinates among computational modules has received less attention. 
@@ -102,4 +104,18 @@ Our source codes are based on:
 
 For visualizing concepts, we refer to the experimental setups from:
 * [BotCL](https://github.com/wbw520/BotCL)
+
+
+## Reference
+You can cite our work:
+```
+@InProceedings{Hong_2024_WACV,
+    author    = {Hong, Jinyung and Park, Keun Hee and Pavlic, Theodore P.},
+    title     = {Concept-Centric Transformers: Enhancing Model Interpretability Through Object-Centric Concept Learning Within a Shared Global Workspace},
+    booktitle = {Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+    month     = {January},
+    year      = {2024},
+    pages     = {4880-4891}
+}
+```
 
