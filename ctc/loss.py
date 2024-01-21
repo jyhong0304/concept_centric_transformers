@@ -60,7 +60,12 @@ def spatial_concepts_cost(spatial_concept_attn, attn_targets):
     if spatial_concept_attn is None:
         return 0.0
     norm = attn_targets.sum(-1, keepdims=True)
-    idx = ~torch.isnan(norm).squeeze()
+    # Correctly shape idx for indexing
+    if attn_targets.size(0) == 1:  # Handling for last batch
+        idx = ~torch.isnan(norm) # remove squeeze to avoid empty tensor for idx
+        idx = idx.squeeze(-1)  # Squeeze the last dimension to match with attn_targets[idx] and norm[idx]
+    else:
+        idx = ~torch.isnan(norm).squeeze()
     if not torch.any(idx):
         return 0.0
     norm_attn_targets = (attn_targets[idx] / norm[idx]).float()
