@@ -61,15 +61,15 @@ class CUB2011Parts(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.cub_val, shuffle=False, batch_size=self.batch_size,
-                          num_workers=self.num_workers)
+                          num_workers=self.num_workers, drop_last=True)
 
     def test_dataloader(self):
         return DataLoader(self.cub_test, shuffle=False, batch_size=self.batch_size,
-                          num_workers=self.num_workers)
+                          num_workers=self.num_workers, drop_last=True)
 
     def predict_dataloader(self):
         return DataLoader(self.cub_test, shuffle=False, batch_size=self.batch_size,
-                          num_workers=self.num_workers)
+                          num_workers=self.num_workers, drop_last=True)
 
 
 if __name__ == '__main__':
